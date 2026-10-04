@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Web Archive</title>
+    <meta name="description" content="Restricted access." />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;700;900&display=swap");
+      :root {
+        --red: #e62429;
+        --dark: #07080d;
+        --blue: #1479d1;
+        --white: #f6f1e8;
+        --muted: #9ea4b2;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--dark);
+        color: var(--white);
+        font-family: Inter, system-ui, sans-serif;
+        overflow-x: hidden;
+      }
+      body.locked {
+        overflow: hidden;
+        height: 100vh;
+      }
+      a {
+        color: inherit;
+      }
+      h1,
+      h2,
+      h3,
+      .mast,
+      .headline,
+      .signature {
+        font-family: "Bebas Neue", Impact, sans-serif;
+        letter-spacing: 0.03em;
+      }
+      p {
+        line-height: 1.8;
+        color: #d5d7dd;
+      }
+      .red {
+        color: var(--red);
+      }
+      .kicker {
+        font-size: 0.78rem;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        font-weight: 800;
+        color: var(--red);
+      }
+
+      /* web trail */
+      #web-cursor {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 10;
+      }
+      .webline {
+        position: absolute;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.14);
+        transform-origin: left center;
+      }
+
+      /* loader + gate */
+      .screen {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 30px;
+        background: radial-gradient(circle at 50% 40%, #151a28, #05060a 65%);
+        transition:
+          opacity 0.9s,
+          visibility 0.9s;
+      }
+      .screen.off {
+        opacity: 0;
+        visibility: hidden;
+      }
+      #gate {
+        display: none;
+      }
+      .logo {
+        width: 92px;
+        height: 92px;
+        position: relative;
+        margin-bottom: 26px;
+        animation: pulse 2.2s ease-in-out infinite;
+      }
+      .logo:before {
+        content: "";
+        position: absolute;
+        inset: 30px;
+        border-radius: 50%;
+        background: #08090e;
+        border: 3px solid var(--red);
+      }
+      .logo i {
+        position: absolute;
+        left: 46px;
+        top: 45px;
+        width: 44px;
+        height: 2px;
+        background: var(--red);
+        transform-origin: left;
+      }
+      .logo i:nth-child(1) {
+        transform: rotate(25deg);
+      }
+      .logo i:nth-child(2) {
+        transform: rotate(-25deg);
+      }
+      .logo i:nth-child(3) {
+        transform: rotate(155deg);
+      }
+      .logo i:nth-child(4) {
+        transform: rotate(205deg);
+      }
+      .logo i:nth-child(5) {
+        transform: rotate(60deg);
+      }
+      .logo i:nth-child(6) {
+        transform: rotate(-60deg);
+      }
+      .logo i:nth-child(7) {
+        transform: rotate(120deg);
+      }
+      .logo i:nth-child(8) {
+        transform: rotate(240deg);
+      }
+      @keyframes pulse {
+        50% {
+          transform: scale(1.08);
+          filter: drop-shadow(0 0 14px rgba(230, 36, 41, 0.6));
+        }
+      }
+      .bar {
+        width: min(320px, 80vw);
+        height: 3px;
+        background: #1d212c;
+        margin: 22px 0 12px;
+      }
+      .bar b {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: var(--red);
+        box-shadow: 0 0 12px var(--red);
+      }
+      .status {
+        font-size: 0.72rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--muted);
+        min-height: 1.2em;
+      }
+      .name {
+        font-size: clamp(3.4rem, 13vw, 8rem);
+        line-height: 0.85;
+        margin: 12px 0 6px;
+        text-shadow: 5px 5px 0 rgba(20, 121, 209, 0.4);
+      }
+      .stamp {
+        display: inline-block;
+        border: 3px solid var(--red);
+        color: var(--red);
+        padding: 6px 18px;
+        font-family: "Bebas Neue";
+        font-size: 1.8rem;
+        letter-spacing: 0.2em;
+        transform: rotate(-4deg);
+        margin-bottom: 18px;
+      }
+      .gate-text {
+        max-width: 520px;
+        margin: 10px auto 28px;
+      }
+      .btn {
+        display: inline-flex;
+        gap: 10px;
+        padding: 15px 24px;
+        border: 2px solid var(--white);
+        background: transparent;
+        color: var(--white);
+        font:
+          900 0.78rem Inter,
+          sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+        cursor: pointer;
+        transition: 0.25s;
+      }
+      .btn:hover,
+      .btn:focus-visible {
+        transform: translate(-4px, -4px);
+        background: var(--red);
+        border-color: var(--red);
+        box-shadow: 7px 7px 0 var(--white);
+        outline: 0;
+      }
+
+      /* main */
+      main {
+        display: none;
+      }
+      main.ready {
+        display: block;
+      }
+      section {
+        position: relative;
+        min-height: 100vh;
+        padding: 100px 7vw;
+        display: flex;
+        align-items: center;
+      }
+      .container {
+        width: min(1120px, 100%);
+        margin: auto;
+      }
+      h2 {
+        font-size: clamp(3rem, 8vw, 7rem);
+        line-height: 0.9;
+        margin: 14px 0 25px;
+        text-transform: uppercase;
+      }
+      .hero {
+        overflow: hidden;
+        background:
+          radial-gradient(
+            circle at 75% 35%,
+            rgba(230, 36, 41, 0.25),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at 15% 80%,
+            rgba(20, 121, 209, 0.18),
+            transparent 30%
+          ),
+          #05060a;
+      }
+      .hero:before {
+        content: "";
+        position: absolute;
+        inset: -15%;
+        opacity: 0.2;
+        transform: rotate(-12deg);
+        background: repeating-radial-gradient(
+          circle at 78% 20%,
+          transparent 0 54px,
+          rgba(255, 255, 255, 0.5) 55px 56px,
+          transparent 57px 105px
+        );
+      }
+      .hero-grid {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1.25fr 0.75fr;
+        gap: 50px;
+        align-items: center;
+      }
+      .hero h1 {
+        font-size: clamp(5rem, 14vw, 11rem);
+        line-height: 0.8;
+        margin: 15px 0 25px;
+        text-transform: uppercase;
+        text-shadow: 8px 8px 0 rgba(20, 121, 209, 0.35);
+      }
+      .photo {
+        margin: 0;
+        background: var(--white);
+        padding: 14px 14px 18px;
+        transform: rotate(3deg);
+        box-shadow: 12px 12px 0 var(--red);
+        position: relative;
+      }
+      .photo:before {
+        content: "";
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        width: 90px;
+        height: 26px;
+        margin-left: -45px;
+        background: rgba(245, 200, 75, 0.75);
+        transform: rotate(-3deg);
+      }
+      .photo img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 4/5;
+        object-fit: cover;
+        background: #cfc9bd;
+      }
+      .photo .ph {
+        display: none;
+        aspect-ratio: 4/5;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+        background: #cfc9bd;
+        color: #333;
+        font-weight: 800;
+        font-size: 0.8rem;
+      }
+      .photo.empty img {
+        display: none;
+      }
+      .photo.empty .ph {
+        display: flex;
+      }
+      .photo figcaption {
+        color: #0a0b0e;
+        font-family: "Bebas Neue";
+        font-size: 1.35rem;
+        letter-spacing: 0.06em;
+        margin-top: 12px;
+        text-align: center;
+      }
+      .scroll {
+        position: absolute;
+        bottom: 30px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 0.7rem;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .dark {
+        background: #090b10;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 26px;
+      }
+      .panel {
+        background: var(--white);
+        color: #0b0d12;
+        padding: 34px;
+        border: 5px solid #0b0d12;
+        box-shadow: 10px 10px 0 var(--red);
+        transform: rotate(-0.7deg);
+        position: relative;
+        transition: 0.3s;
+      }
+      .panel:nth-child(2) {
+        transform: rotate(0.7deg);
+        box-shadow: 10px 10px 0 var(--blue);
+      }
+      .panel:hover {
+        transform: translateY(-8px) rotate(0);
+      }
+      .panel h3 {
+        font-size: 2.4rem;
+        margin: 0 0 10px;
+      }
+      .panel p {
+        color: #30333a;
+        margin: 0;
+      }
+      .panel .issue {
+        position: absolute;
+        right: 15px;
+        top: 12px;
+        font-weight: 900;
+        font-size: 0.65rem;
+        letter-spacing: 0.15em;
+        color: #555;
+      }
+      .timeline {
+        display: grid;
+        gap: 28px;
+        margin-top: 35px;
+      }
+      .event {
+        display: grid;
+        grid-template-columns: 130px 1fr;
+        gap: 25px;
+      }
+      .year {
+        font-family: "Bebas Neue";
+        font-size: 2.2rem;
+        color: var(--red);
+        border-right: 2px solid #30333c;
+        padding-right: 20px;
+      }
+      .card {
+        background: #11141c;
+        border-left: 4px solid var(--red);
+        padding: 22px 25px;
+      }
+      .card h3 {
+        font-size: 2rem;
+        margin: 0 0 8px;
+      }
+      .card p {
+        margin: 0;
+      }
+
+      .bugle {
+        background: #eee9df;
+        color: #0a0b0e;
+        padding: 35px;
+        border: 7px solid #0a0b0e;
+        box-shadow: 13px 13px 0 var(--blue);
+        transform: rotate(-1deg);
+      }
+      .mast {
+        font-size: clamp(3.4rem, 10vw, 8rem);
+        line-height: 0.75;
+        text-align: center;
+        border-bottom: 4px solid #0a0b0e;
+        padding-bottom: 18px;
+      }
+      .headline {
+        font-size: clamp(2.4rem, 6vw, 5rem);
+        line-height: 0.9;
+        margin: 25px 0;
+      }
+      .bugle p {
+        color: #282b31;
+      }
+      .reels {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 30px;
+      }
+      .reel {
+        padding: 24px;
+        background: linear-gradient(145deg, #121620, #0c0e14);
+        border: 1px solid #292e39;
+        color: var(--white);
+      }
+      .reel h3 {
+        font-size: 2rem;
+        margin: 4px 0 8px;
+      }
+      .reel p {
+        color: #f0f1f4;
+        margin: 0;
+      }
+      .stat {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.13em;
+        color: #d9dce3;
+        font-weight: 800;
+      }
+
+      .sense {
+        background: radial-gradient(circle, #1a2030, #08090d 55%);
+      }
+      .sense .container {
+        text-align: center;
+        max-width: 850px;
+      }
+      .sense-button {
+        width: 190px;
+        height: 190px;
+        border-radius: 50%;
+        border: 2px solid var(--red);
+        background: #0d1017;
+        color: var(--white);
+        cursor: pointer;
+        font:
+          900 0.9rem Inter,
+          sans-serif;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        box-shadow:
+          0 0 0 12px rgba(230, 36, 41, 0.05),
+          0 0 50px rgba(230, 36, 41, 0.1);
+        transition: 0.25s;
+      }
+      .sense-button:hover {
+        transform: scale(1.05);
+        box-shadow:
+          0 0 0 18px rgba(230, 36, 41, 0.06),
+          0 0 80px rgba(230, 36, 41, 0.22);
+      }
+      .sense-result {
+        min-height: 95px;
+        margin-top: 35px;
+        font-family: "Bebas Neue";
+        font-size: clamp(2rem, 5vw, 3.6rem);
+        line-height: 1.05;
+      }
+
+      .letter {
+        background: var(--red);
+      }
+      .paper {
+        background: var(--white);
+        color: #0a0b0e;
+        padding: clamp(28px, 5vw, 65px);
+        max-width: 900px;
+        margin: auto;
+        box-shadow: 15px 15px 0 #090a0e;
+        transform: rotate(0.4deg);
+      }
+      .paper h2 {
+        color: #0a0b0e;
+      }
+      .paper p {
+        color: #292b31;
+        font-size: 1.03rem;
+      }
+      .signature {
+        font-size: 2rem;
+        margin-top: 35px;
+      }
+
+      .final {
+        min-height: 80vh;
+        text-align: center;
+        background: #06070b;
+        overflow: hidden;
+      }
+      .final h2 {
+        font-size: clamp(4rem, 12vw, 10rem);
+        text-shadow: 5px 5px 0 var(--red);
+      }
+      .final p {
+        max-width: 650px;
+        margin: 0 auto 30px;
+      }
+      .late {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: #888;
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(30px);
+        transition:
+          opacity 0.7s,
+          transform 0.7s;
+      }
+      .reveal.show {
+        opacity: 1;
+        transform: none;
+      }
+      @media (max-width: 800px) {
+        section {
+          padding: 85px 6vw;
+        }
+        .hero-grid,
+        .grid,
+        .reels {
+          grid-template-columns: 1fr;
+        }
+        .photo {
+          max-width: 300px;
+          margin: 10px auto 0;
+        }
+        .event {
+          grid-template-columns: 80px 1fr;
+          gap: 15px;
+        }
+        .year {
+          font-size: 1.7rem;
+          padding-right: 10px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+        .reveal {
+          opacity: 1;
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body class="locked">
+    <div id="web-cursor"></div>
+
+    <!-- 1. LOADING -->
+    <div class="screen" id="loader">
+      <div class="logo" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="kicker">The Web Archive</div>
+      <div class="bar"><b id="fill"></b></div>
+      <div class="status" id="status">Establishing connection…</div>
+    </div>
+
+    <!-- 2. CONFIDENTIAL GATE -->
+    <div class="screen" id="gate">
+      <div class="stamp">Confidential</div>
+      <div class="kicker">Restricted access // Earth-R</div>
+      <div class="name">THE WEB<br /><span class="red">ARCHIVE</span></div>
+      <p class="gate-text">
+        This website is confidential. It was woven for one person only, and
+        every thread in it has her name on it. If that person isn't you, please
+        close this tab and pretend you were never here.
+      </p>
+      <button class="btn" id="enterBtn">I'm the one it's meant for →</button>
+    </div>
+
+    <main id="main">
+      <section class="hero">
+        <div class="container hero-grid">
+          <div>
+            <div class="kicker">⚠ Transmission received</div>
+            <h1>HEY,<br /><span class="red">RAIZEL.</span></h1>
+            <p>
+              Some stories don't begin with a bang. They begin quietly, in a
+              classroom, with someone you barely know, and take years to reveal
+              what they were really about. This is one of those stories. It is
+              arriving extremely late, and for that I'm sorry. Please come in
+              anyway.
+            </p>
+            <a class="btn" href="#origin">Follow the thread →</a>
+          </div>
+          <figure class="photo" id="photo">
+            <img
+              src="raizel.jpg"
+              alt="Raizel"
+              onerror="document.getElementById('photo').classList.add('empty')"
+            />
+            <div class="ph">
+              Add her photo here<br />(save it as raizel.jpg)
+            </div>
+            <figcaption>Subject: Raizel · Status: Main character</figcaption>
+          </figure>
+        </div>
+        <div class="scroll">↓ scroll into the lore</div>
+      </section>
+
+      <section id="origin" class="dark">
+        <div class="container">
+          <div class="reveal">
+            <div class="kicker">Chapter 01 // Origin story</div>
+            <h2>It began<br /><span class="red">long ago.</span></h2>
+          </div>
+          <div class="grid">
+            <article class="panel reveal">
+              <span class="issue">ISSUE #001</span>
+              <h3>Grade 6</h3>
+              <p>
+                Two classmates in the same private school. We talked, sure, but
+                we weren't close. I already had Erica as my best friend, and I
+                had no idea what the universe was quietly planning.
+              </p>
+            </article>
+            <article class="panel reveal">
+              <span class="issue">PLOT TWIST</span>
+              <h3>The lore gets blurry</h3>
+              <p>
+                Then high school happened: a pandemic, a few missing memories,
+                and a lot of character development that took place off-screen.
+                By Grade 10, classmates ulit tayo. Still not close-close, but
+                still talking, as if the universe kept dropping hints we were
+                too busy to notice.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="dark">
+        <div class="container">
+          <div class="reveal">
+            <div class="kicker">Chapter 02 // Across the Spider-Verse</div>
+            <h2>
+              Same universe.<br /><span class="red">Different routes.</span>
+            </h2>
+          </div>
+          <div class="timeline">
+            <div class="event reveal">
+              <div class="year">SHS</div>
+              <div class="card">
+                <h3>Same school, different sections.</h3>
+                <p>
+                  Whenever we crossed paths, we stopped to talk. Nothing
+                  dramatic, just small conversations that, looking back, were
+                  the first threads of something neither of us could see yet.
+                </p>
+              </div>
+            </div>
+            <div class="event reveal">
+              <div class="year">COLLEGE</div>
+              <div class="card">
+                <h3>And then the reels began.</h3>
+                <p>
+                  There was no grand moment and no official "let's be close
+                  friends." There was one reel, then another, then a TikTok
+                  streak, then Messenger. The apps have come and gone since, but
+                  the daily talking stayed, until it stopped being a choice and
+                  became the rhythm of our days.
+                </p>
+              </div>
+            </div>
+            <div class="event reveal">
+              <div class="year">NOW</div>
+              <div class="card">
+                <h3>Somehow, you're part of my routine.</h3>
+                <p>
+                  I honestly don't know when it happened. Somewhere between the
+                  reels and the late-night chats, you became one of the people I
+                  talk to every single day, and I'm so glad you did.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="dark">
+        <div class="container">
+          <div class="reveal">
+            <div class="kicker">Chapter 03 // Daily Bugle exclusive</div>
+            <h2>Breaking<br /><span class="red">news.</span></h2>
+          </div>
+          <div class="bugle reveal">
+            <div class="mast">THE DAILY BUGLE</div>
+            <div class="headline">
+              LOCAL GIRL SURVIVES YEARS OF FRIENDSHIP WITH THE SAME TALKATIVE
+              PERSON
+            </div>
+            <p>
+              <strong>NEW YORK —</strong> Sources confirm that Raizel has shown
+              remarkable patience despite a relentless history of Instagram
+              reels, TikTok streaks, endless Messenger conversations, and one
+              recurring topic known only as
+              <strong>"Kuya Shaun."</strong> Experts say there is no known cure.
+            </p>
+            <div class="reels">
+              <div class="reel">
+                <div class="stat">Archived</div>
+                <h3>IG Reels</h3>
+                <p>
+                  One sends, the other replies. The app is gone, but the reels
+                  live on in our memories.
+                </p>
+              </div>
+              <div class="reel">
+                <div class="stat">Retired</div>
+                <h3>TikTok Streak</h3>
+                <p>
+                  A daily duty neither of us remembers agreeing to. The app is
+                  deleted, but the streak was legendary.
+                </p>
+              </div>
+              <div class="reel">
+                <div class="stat">Breaking</div>
+                <h3>Kuya Shaun</h3>
+                <p>
+                  He has been granted permanent residency in our conversations.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sense">
+        <div class="container reveal">
+          <div class="kicker">Spider-Sense // classified</div>
+          <h2>There is a message<br /><span class="red">for you.</span></h2>
+          <p>
+            Tap the spider-sense. It might reveal something scientifically
+            accurate, or I might just be being dramatic.
+          </p>
+          <button class="sense-button" id="senseBtn">
+            Activate<br />spider-sense
+          </button>
+          <div class="sense-result" id="senseResult" aria-live="polite">
+            ???
+          </div>
+        </div>
+      </section>
+
+      <section class="letter">
+        <div class="paper reveal">
+          <div class="kicker">
+            Final chapter // From your friendly neighborhood yap buddy
+          </div>
+          <h2>Happy<br /><span class="red">birthday,</span><br />Raizel.</h2>
+          <p>I honestly don't know when we became this close.</p>
+          <p>
+            We met in Grade 6. If someone had told me then that we'd one day
+            talk almost every day, trade random reels, guard a TikTok streak,
+            and become part of each other's routines, I wouldn't have believed
+            them.
+          </p>
+          <p>
+            Our friendship didn't arrive all at once. There was never a single
+            moment when everything changed. It formed quietly, thread by thread,
+            like a web you only notice when the light hits it just right.
+            Somewhere along the way, you became someone I can talk to every day,
+            and I'm truly thankful for that.
+          </p>
+          <p>
+            Thank you for putting up with me, especially when my topic of the
+            week is, once again, <strong>Kuya Shaun</strong>. 😭 I don't know
+            how you haven't gotten tired of me yet, but I'm so grateful you
+            haven't.
+          </p>
+          <p>
+            I hope you know that your <strong>Peter Parker</strong> is out there
+            somewhere. Maybe he isn't here yet, maybe he's closer than you
+            think, or maybe the universe is simply taking its time to write the
+            perfect scene. Until then, focus on yourself. Enjoy your life, keep
+            growing, and keep doing the things that make you happy. And most
+            importantly:
+          </p>
+          <p><strong>KEEP SLAYING THAT FACE CARD.</strong></p>
+          <p>
+            You deserve good things, good people, and a life that feels like
+            yours. Like every good story, yours still has chapters we haven't
+            read, and I believe the best ones are ahead of you.
+          </p>
+          <p>
+            I'm really glad that after all those years of being classmates and
+            schoolmates, people who just happened to cross paths, we ended up
+            here. Here's to more random conversations, more inside jokes, more
+            nonsense, and many more years of friendship.
+          </p>
+          <div class="signature">— Your friendly neighborhood yap buddy 🕷️</div>
+        </div>
+      </section>
+
+      <section class="final">
+        <div class="container reveal">
+          <div class="kicker">Transmission complete</div>
+          <h2>HAPPY<br /><span class="red">BIRTHDAY.</span></h2>
+          <p>
+            Your Peter Parker subplot can wait. For now, enjoy being the main
+            character of your own story.
+          </p>
+          <div class="late">
+            P.S. Yes, this is late. I hope you can forgive me.
+          </div>
+          <br /><br />
+          <a class="btn" href="#origin">↻ Read the lore again</a>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+
+      // Loading screen
+      const lines = [
+        "Establishing connection…",
+        "Locating Earth-R…",
+        "Untangling the web…",
+        "Decrypting the archive…",
+        "Almost there…",
+      ];
+      let pct = 0;
+      const timer = setInterval(() => {
+        pct = Math.min(100, pct + Math.random() * 7 + 2);
+        $("fill").style.width = pct + "%";
+        $("status").textContent =
+          lines[Math.min(lines.length - 1, Math.floor(pct / 21))];
+        if (pct >= 100) {
+          clearInterval(timer);
+          setTimeout(() => {
+            $("gate").style.display = "flex";
+            $("loader").classList.add("off");
+          }, 500);
+        }
+      }, 120);
+
+      // Confidential gate -> main site
+      $("enterBtn").addEventListener("click", () => {
+        $("gate").classList.add("off");
+        $("main").classList.add("ready");
+        document.body.classList.remove("locked");
+        window.scrollTo(0, 0);
+        document
+          .querySelectorAll(".reveal")
+          .forEach((el) => observer.observe(el));
+      });
+
+      // Spider-sense
+      const result = $("senseResult");
+      const messages = [
+        "SPIDER-SENSE SAYS: YOUR FACE CARD IS A PUBLIC SAFETY HAZARD.",
+        "DETECTED: YOU DESERVE A VERY GOOD YEAR.",
+        "ALERT: PETER PARKER NOT FOUND. TRY AGAIN LATER.",
+        "SPIDER-SENSE SAYS: FOCUS ON YOURSELF. KEEP SLAYING.",
+        "DETECTED: BESTIE STATUS. UNFORTUNATELY PERMANENT.",
+        "WARNING: KUYA SHAUN HAS BEEN MENTIONED AGAIN.",
+        "SPIDER-SENSE SAYS: SOMEONE IS VERY GLAD YOU'RE HERE.",
+      ];
+      $("senseBtn").addEventListener("click", () => {
+        result.textContent =
+          messages[Math.floor(Math.random() * messages.length)];
+      });
+
+      // Scroll reveal
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) e.target.classList.add("show");
+          });
+        },
+        { threshold: 0.12 },
+      );
+
+      // Web trail
+      const trail = $("web-cursor");
+      document.addEventListener("mousemove", (e) => {
+        const w = document.createElement("span");
+        w.className = "webline";
+        w.style.left = e.clientX + "px";
+        w.style.top = e.clientY + "px";
+        w.style.width = Math.random() * 45 + 15 + "px";
+        w.style.transform = "rotate(" + Math.random() * 360 + "deg)";
+        trail.appendChild(w);
+        setTimeout(() => w.remove(), 350);
+      });
+    </script>
+  </body>
+</html>
